@@ -73,7 +73,14 @@ fun ResaleScannerApp(viewModel: AppViewModel) {
                 composable("search") { SearchByNameScreen({ navController.popBackStack() }, { navController.navigate("results/${Uri.encode(it)}") }) }
                 composable("profit") { ProfitCalculatorScreen { navController.popBackStack() } }
                 composable("export") { ExportInventoryScreen(viewModel) { navController.popBackStack() } }
-                composable("results/{query}") { entry -> ResultsScreen(Uri.decode(entry.arguments?.getString("query").orEmpty())) { navController.popBackStack() } }
+                composable("results/{query}") { entry ->
+                    ResultsScreen(
+                        viewModel = viewModel,
+                        query = Uri.decode(entry.arguments?.getString("query").orEmpty()),
+                        onBack = { navController.popBackStack() },
+                        onAdded = { navController.navigate("inventory") { popUpTo("home") } },
+                    )
+                }
                 composable("edit/{itemId}?barcode={barcode}") { entry ->
                     val id = entry.arguments?.getString("itemId")?.toLongOrNull()
                     val barcode = entry.arguments?.getString("barcode").orEmpty()
