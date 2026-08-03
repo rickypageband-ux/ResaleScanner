@@ -63,12 +63,13 @@ Deno.serve(async (request) => {
     if (/^\d{8,14}$/.test(query)) params.set("gtin", query)
     else params.set("q", query)
 
-    const response = await fetch(`https://api.ebay.com/buy/browse/v1/item_summary/search?${params}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "X-EBAY-C-MARKETPLACE-ID": marketplaceId,
-        "X-EBAY-C-ENDUSERCTX": "contextualLocation=country%3DUS%2Czip%3D10001",
-      },
+    const ebayHeaders = {
+      Authorization: `Bearer ${token}`,
+      "X-EBAY-C-MARKETPLACE-ID": marketplaceId,
+      "X-EBAY-C-ENDUSERCTX": "contextualLocation=country%3DUS%2Czip%3D10001",
+    }
+    let response = await fetch(`https://api.ebay.com/buy/browse/v1/item_summary/search?${params}`, {
+      headers: ebayHeaders,
     })
 
     if (!response.ok) {
@@ -77,7 +78,16 @@ Deno.serve(async (request) => {
       return json({ error: "eBay search is temporarily unavailable" }, 502)
     }
 
-    const data = await response.json()
+    let data = await response.json()
+    if (/^\d{8,14}$/.test(query) && !(data.itemSummaries?.length)) {
+      params.delete("gtin")
+      params.set("q", query)
+      response = await fetch(`https://api.ebay.com/buy/browse/v1/item_summary/search?${params}`, {
+        headers: ebayHeaders,
+      })
+      if (response.ok) data = await response.json()
+      else console.error("eBay barcode text fallback failed", response.status, await response.text())
+    }
     const items = (data.itemSummaries ?? []).map((item: Record<string, any>) => ({
       id: item.itemId,
       title: item.title,
@@ -107,4 +117,3 @@ Deno.serve(async (request) => {
     return json({ error: "Unable to complete eBay search" }, 500)
   }
 })
-

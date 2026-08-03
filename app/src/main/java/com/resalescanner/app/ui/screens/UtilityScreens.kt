@@ -1,13 +1,16 @@
 package com.resalescanner.app.ui.screens
 
+import android.graphics.Bitmap
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -34,6 +37,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -96,15 +101,42 @@ fun ExportInventoryScreen(viewModel: AppViewModel, onBack: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TakePictureScreen(onBack: () -> Unit, onPicture: () -> Unit) {
-    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap -> if (bitmap != null) onPicture() }
+fun TakePictureScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
+    var capturedImage by remember { mutableStateOf<Bitmap?>(null) }
+    var itemName by remember { mutableStateOf("") }
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
+        if (bitmap != null) capturedImage = bitmap
+    }
     Scaffold(topBar = { SimpleTopBar("Take Picture", onBack) }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterVertically)) {
+        Column(Modifier.fillMaxSize().padding(padding).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp)) {
             Icon(Icons.Outlined.CameraAlt, null, tint = MaterialTheme.colorScheme.primary)
             Text("Photograph an item without a barcode", style = MaterialTheme.typography.titleLarge)
-            Text("Tools • Toys • Electronics • Shoes • Clothes • Collectibles")
-            Button({ camera.launch(null) }) { Text("Open Camera") }
-            Text("AI identification and live shopping lookup require a provider connection. The next screen currently uses labeled sample results.", style = MaterialTheme.typography.bodySmall)
+            capturedImage?.let { bitmap ->
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = "Captured item",
+                    modifier = Modifier.fillMaxWidth().height(220.dp),
+                    contentScale = ContentScale.Fit,
+                )
+                OutlinedTextField(
+                    value = itemName,
+                    onValueChange = { itemName = it },
+                    label = { Text("What is this item?") },
+                    supportingText = { Text("Include the brand and model when possible") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Button(
+                    onClick = { onSearch(itemName.trim()) },
+                    enabled = itemName.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Search live prices") }
+                OutlinedButton({ camera.launch(null) }, Modifier.fillMaxWidth()) { Text("Retake photo") }
+            } ?: run {
+                Text("Tools • Toys • Electronics • Shoes • Clothes • Collectibles")
+                Button({ camera.launch(null) }, Modifier.fillMaxWidth()) { Text("Open Camera") }
+            }
+            Text("Automatic photo identification is not connected yet. Confirm the item name before searching so unrelated listings are not used.", style = MaterialTheme.typography.bodySmall)
         }
     }
 }

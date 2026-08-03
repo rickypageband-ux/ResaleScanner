@@ -69,7 +69,12 @@ fun ResaleScannerApp(viewModel: AppViewModel) {
                 composable("home") { HomeScreen(viewModel, onScan = { navController.navigate("scan") }, onTakePicture = { navController.navigate("picture") }, onSearch = { navController.navigate("search") }, onInventory = { navController.navigate("inventory") }, onProfitCalculator = { navController.navigate("profit") }, onExport = { navController.navigate("export") }) }
                 composable("inventory") { InventoryScreen(viewModel, onAdd = { navController.navigate("edit/new") }, onEdit = { navController.navigate("edit/${it.id}") }) }
                 composable("scan") { ScannerScreen(onBarcode = { navController.navigate("results/${Uri.encode(it)}") }) }
-                composable("picture") { TakePictureScreen({ navController.popBackStack() }, { navController.navigate("results/${Uri.encode("Photo identified item")}") }) }
+                composable("picture") {
+                    TakePictureScreen(
+                        onBack = { navController.popBackStack() },
+                        onSearch = { itemName -> navController.navigate("results/${Uri.encode(itemName)}") },
+                    )
+                }
                 composable("search") { SearchByNameScreen({ navController.popBackStack() }, { navController.navigate("results/${Uri.encode(it)}") }) }
                 composable("profit") { ProfitCalculatorScreen { navController.popBackStack() } }
                 composable("export") { ExportInventoryScreen(viewModel) { navController.popBackStack() } }
