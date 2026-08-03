@@ -17,3 +17,6 @@ Open the repository in Android Studio, let Gradle sync, and run the `app` config
 - `ui`: Compose screens, navigation, and lifecycle-aware ViewModels
 - `scanner`: CameraX preview and ML Kit barcode analysis
 
+## Live marketplace search
+
+The Android app calls the deployed Supabase `ebay-search` Edge Function, which keeps the Production eBay credentials server-side and returns normalized active-listing prices. Amazon, Walmart, and eBay sold-listing data remain separate provider integrations.

@@ -1,9 +1,13 @@
 *.iml
 .gradle/
 .gradle-user/
+.android-user/
 .idea/
 local.properties
 build/
 captures/
 .externalNativeBuild/
 .cxx/
+supabase/.temp/
+supabase/functions/.env
+supabase/.env*

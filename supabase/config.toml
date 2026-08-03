@@ -1,0 +1,4 @@
+project_id = "kqraflpgcrpcioyuroxv"
+
+[functions.ebay-search]
+verify_jwt = true
