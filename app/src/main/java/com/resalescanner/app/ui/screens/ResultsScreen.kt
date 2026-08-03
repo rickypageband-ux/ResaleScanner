@@ -43,14 +43,14 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ResultsScreen(viewModel: AppViewModel, query: String, onBack: () -> Unit, onAdded: () -> Unit) {
+fun ResultsScreen(viewModel: AppViewModel, query: String, onBack: () -> Unit, onAdded: () -> Unit, searchOnOpen: Boolean = true) {
     val state by viewModel.searchState.collectAsState()
-    LaunchedEffect(query) { viewModel.searchProduct(query) }
+    LaunchedEffect(query, searchOnOpen) { if (searchOnOpen) viewModel.searchProduct(query) }
     Scaffold(topBar = { TopAppBar(title = { Text("Live Price Results") }, navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back") } }) }) { padding ->
         Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
             when (val current = state) {
                 ProductSearchState.Idle, ProductSearchState.Loading -> Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) { CircularProgressIndicator(); Text("Searching live eBay listings...") }
-                is ProductSearchState.Error -> Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) { Text("Search unavailable", style = MaterialTheme.typography.headlineSmall); Text(current.message); Button({ viewModel.searchProduct(query) }) { Text("Try again") } }
+                is ProductSearchState.Error -> Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) { Text("Search unavailable", style = MaterialTheme.typography.headlineSmall); Text(current.message); if (searchOnOpen) Button({ viewModel.searchProduct(query) }) { Text("Try again") } }
                 is ProductSearchState.Success -> ResultContent(viewModel, query, current.result, onAdded)
             }
         }

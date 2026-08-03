@@ -72,7 +72,19 @@ fun ResaleScannerApp(viewModel: AppViewModel) {
                 composable("picture") {
                     TakePictureScreen(
                         onBack = { navController.popBackStack() },
-                        onSearch = { itemName -> navController.navigate("results/${Uri.encode(itemName)}") },
+                        onSearch = { image ->
+                            viewModel.searchProductImage(image)
+                            navController.navigate("photo-results")
+                        },
+                    )
+                }
+                composable("photo-results") {
+                    ResultsScreen(
+                        viewModel = viewModel,
+                        query = "Photo search",
+                        onBack = { navController.popBackStack() },
+                        onAdded = { navController.navigate("inventory") { popUpTo("home") } },
+                        searchOnOpen = false,
                     )
                 }
                 composable("search") { SearchByNameScreen({ navController.popBackStack() }, { navController.navigate("results/${Uri.encode(it)}") }) }

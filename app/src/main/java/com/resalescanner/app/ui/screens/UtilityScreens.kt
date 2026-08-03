@@ -1,6 +1,7 @@
 package com.resalescanner.app.ui.screens
 
 import android.graphics.Bitmap
+import android.util.Base64
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -46,6 +47,7 @@ import com.resalescanner.app.data.export.ExportFormat
 import com.resalescanner.app.ui.AppViewModel
 import java.time.LocalDate
 import java.util.Locale
+import java.io.ByteArrayOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,7 +105,6 @@ fun ExportInventoryScreen(viewModel: AppViewModel, onBack: () -> Unit) {
 @Composable
 fun TakePictureScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
     var capturedImage by remember { mutableStateOf<Bitmap?>(null) }
-    var itemName by remember { mutableStateOf("") }
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
         if (bitmap != null) capturedImage = bitmap
     }
@@ -118,25 +119,22 @@ fun TakePictureScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
                     modifier = Modifier.fillMaxWidth().height(220.dp),
                     contentScale = ContentScale.Fit,
                 )
-                OutlinedTextField(
-                    value = itemName,
-                    onValueChange = { itemName = it },
-                    label = { Text("What is this item?") },
-                    supportingText = { Text("Include the brand and model when possible") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
                 Button(
-                    onClick = { onSearch(itemName.trim()) },
-                    enabled = itemName.isNotBlank(),
+                    onClick = {
+                        val bytes = ByteArrayOutputStream().use { output ->
+                            bitmap.compress(Bitmap.CompressFormat.JPEG, 82, output)
+                            output.toByteArray()
+                        }
+                        onSearch(Base64.encodeToString(bytes, Base64.NO_WRAP))
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Search live prices") }
+                ) { Text("Identify item and search prices") }
                 OutlinedButton({ camera.launch(null) }, Modifier.fillMaxWidth()) { Text("Retake photo") }
             } ?: run {
                 Text("Tools • Toys • Electronics • Shoes • Clothes • Collectibles")
                 Button({ camera.launch(null) }, Modifier.fillMaxWidth()) { Text("Open Camera") }
             }
-            Text("Automatic photo identification is not connected yet. Confirm the item name before searching so unrelated listings are not used.", style = MaterialTheme.typography.bodySmall)
+            Text("Your photo is searched against live eBay listings to identify the item and estimate its price.", style = MaterialTheme.typography.bodySmall)
         }
     }
 }

@@ -56,21 +56,28 @@ Deno.serve(async (request) => {
 
     const payload = await request.json()
     const query = String(payload.query ?? "").trim().slice(0, 200)
-    if (query.length < 2) return json({ error: "Enter a barcode or product name" }, 400)
+    const image = String(payload.image ?? "")
+    if (!image && query.length < 2) return json({ error: "Enter a barcode, product name, or photo" }, 400)
+    if (image && image.length > 7_000_000) return json({ error: "Photo is too large" }, 413)
 
     const token = await getApplicationToken(clientId, clientSecret)
     const params = new URLSearchParams({ limit: "20" })
-    if (/^\d{8,14}$/.test(query)) params.set("gtin", query)
-    else params.set("q", query)
+    const isBarcode = /^\d{8,14}$/.test(query)
+    if (isBarcode) params.set("gtin", query)
+    else if (query) params.set("q", query)
 
     const ebayHeaders = {
       Authorization: `Bearer ${token}`,
       "X-EBAY-C-MARKETPLACE-ID": marketplaceId,
       "X-EBAY-C-ENDUSERCTX": "contextualLocation=country%3DUS%2Czip%3D10001",
     }
-    let response = await fetch(`https://api.ebay.com/buy/browse/v1/item_summary/search?${params}`, {
-      headers: ebayHeaders,
-    })
+    let response = image
+      ? await fetch(`https://api.ebay.com/buy/browse/v1/item_summary/search_by_image?${params}`, {
+          method: "POST",
+          headers: { ...ebayHeaders, "Content-Type": "application/json" },
+          body: JSON.stringify({ image }),
+        })
+      : await fetch(`https://api.ebay.com/buy/browse/v1/item_summary/search?${params}`, { headers: ebayHeaders })
 
     if (!response.ok) {
       const details = await response.text()
@@ -79,9 +86,20 @@ Deno.serve(async (request) => {
     }
 
     let data = await response.json()
-    if (/^\d{8,14}$/.test(query) && !(data.itemSummaries?.length)) {
+    let resolvedQuery = query
+    if (isBarcode && !(data.itemSummaries?.length)) {
+      try {
+        const productResponse = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${encodeURIComponent(query)}`)
+        if (productResponse.ok) {
+          const productData = await productResponse.json()
+          const product = productData.items?.[0]
+          resolvedQuery = [product?.brand, product?.title].filter(Boolean).join(" ").trim() || query
+        }
+      } catch (error) {
+        console.error("Barcode catalog lookup failed", error)
+      }
       params.delete("gtin")
-      params.set("q", query)
+      params.set("q", resolvedQuery)
       response = await fetch(`https://api.ebay.com/buy/browse/v1/item_summary/search?${params}`, {
         headers: ebayHeaders,
       })
@@ -103,7 +121,12 @@ Deno.serve(async (request) => {
     const average = prices.length ? prices.reduce((sum: number, price: number) => sum + price, 0) / prices.length : 0
     return json({
       provider: "ebay",
-      query,
+      query: image ? "Photo search" : resolvedQuery,
+      message: image
+        ? `Identified from ${items.length} visually similar live eBay listings`
+        : isBarcode && resolvedQuery !== query
+          ? `Barcode identified as ${resolvedQuery}; ${items.length} live eBay listings compared`
+          : `Live eBay active listings (${items.length} compared)`,
       total: Number(data.total ?? items.length),
       items,
       summary: {

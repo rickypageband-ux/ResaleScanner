@@ -36,6 +36,14 @@ class AppViewModel(
         }
     }
 
+    fun searchProductImage(base64Image: String) {
+        viewModelScope.launch {
+            _searchState.value = ProductSearchState.Loading
+            _searchState.value = runCatching { productSearchRepository.searchImage(base64Image) }
+                .fold({ ProductSearchState.Success(it) }, { ProductSearchState.Error(it.message ?: "Photo search failed") })
+        }
+    }
+
     fun save(draft: ItemDraft, onSaved: () -> Unit = {}) {
         if (draft.title.isBlank()) return
         viewModelScope.launch {

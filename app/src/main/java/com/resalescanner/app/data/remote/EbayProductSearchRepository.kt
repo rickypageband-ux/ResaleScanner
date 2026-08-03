@@ -13,7 +13,12 @@ class EbayProductSearchRepository(
     private val endpoint: String,
     private val publishableKey: String,
 ) : ProductSearchRepository {
-    override suspend fun search(query: String): ProductSearchResult = withContext(Dispatchers.IO) {
+    override suspend fun search(query: String) = request(JSONObject().put("query", query), query)
+
+    override suspend fun searchImage(base64Image: String) =
+        request(JSONObject().put("image", base64Image), "Photo search")
+
+    private suspend fun request(payload: JSONObject, fallbackQuery: String): ProductSearchResult = withContext(Dispatchers.IO) {
         val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             connectTimeout = 15_000
@@ -24,7 +29,7 @@ class EbayProductSearchRepository(
             setRequestProperty("Authorization", "Bearer $publishableKey")
         }
         try {
-            connection.outputStream.bufferedWriter().use { it.write(JSONObject().put("query", query).toString()) }
+            connection.outputStream.bufferedWriter().use { it.write(payload.toString()) }
             val status = connection.responseCode
             val body = (if (status in 200..299) connection.inputStream else connection.errorStream)
                 ?.bufferedReader()?.use { it.readText() }.orEmpty()
@@ -37,8 +42,8 @@ class EbayProductSearchRepository(
             val summary = json.getJSONObject("summary")
             val averageCents = summary.getDouble("average").dollarsToCents()
             ProductSearchResult(
-                title = first.optString("title", query),
-                query = query,
+                title = first.optString("title", fallbackQuery),
+                query = json.optString("query", fallbackQuery),
                 retailPrices = listOf(RetailPrice("eBay active listings", averageCents)),
                 estimatedSoldPriceCents = 0,
                 suggestedResalePriceCents = (averageCents * 0.9).toLong(),
@@ -46,7 +51,7 @@ class EbayProductSearchRepository(
                 observedLowestPriceCents = summary.getDouble("lowest").dollarsToCents(),
                 observedHighestPriceCents = summary.getDouble("highest").dollarsToCents(),
                 observedAveragePriceCents = averageCents,
-                providerMessage = "Live eBay active listings (${items.length()} compared)",
+                providerMessage = json.optString("message", "Live eBay active listings (${items.length()} compared)"),
             )
         } finally {
             connection.disconnect()
