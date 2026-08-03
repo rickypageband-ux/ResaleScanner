@@ -6,16 +6,19 @@ import com.resalescanner.app.data.export.DefaultInventoryExporter
 import com.resalescanner.app.data.export.InventoryExporter
 import com.resalescanner.app.data.local.ResaleScannerDatabase
 import com.resalescanner.app.data.repository.OfflineInventoryRepository
+import com.resalescanner.app.data.remote.EbayProductSearchRepository
 import com.resalescanner.app.domain.repository.InventoryRepository
+import com.resalescanner.app.domain.repository.ProductSearchRepository
 
 interface AppContainer {
     val inventoryRepository: InventoryRepository
     val inventoryExporter: InventoryExporter
+    val productSearchRepository: ProductSearchRepository
 }
 
 class DefaultAppContainer(context: Context) : AppContainer {
     private val database = Room.databaseBuilder(context, ResaleScannerDatabase::class.java, "resale-scanner.db").build()
     override val inventoryRepository: InventoryRepository = OfflineInventoryRepository(database.inventoryDao())
     override val inventoryExporter: InventoryExporter = DefaultInventoryExporter()
+    override val productSearchRepository: ProductSearchRepository = EbayProductSearchRepository(BuildConfig.SEARCH_API_URL, BuildConfig.SUPABASE_PUBLISHABLE_KEY)
 }
-

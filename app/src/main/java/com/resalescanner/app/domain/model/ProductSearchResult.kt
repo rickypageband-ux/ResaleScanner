@@ -9,10 +9,14 @@ data class ProductSearchResult(
     val estimatedSoldPriceCents: Long,
     val suggestedResalePriceCents: Long,
     val isSampleData: Boolean,
+    val observedLowestPriceCents: Long? = null,
+    val observedHighestPriceCents: Long? = null,
+    val observedAveragePriceCents: Long? = null,
+    val providerMessage: String? = null,
 ) {
-    val lowestPriceCents get() = retailPrices.minOfOrNull { it.priceCents } ?: 0
-    val highestPriceCents get() = retailPrices.maxOfOrNull { it.priceCents } ?: 0
-    val averagePriceCents get() = retailPrices.map { it.priceCents }.average().takeUnless(Double::isNaN)?.toLong() ?: 0
+    val lowestPriceCents get() = observedLowestPriceCents ?: retailPrices.minOfOrNull { it.priceCents } ?: 0
+    val highestPriceCents get() = observedHighestPriceCents ?: retailPrices.maxOfOrNull { it.priceCents } ?: 0
+    val averagePriceCents get() = observedAveragePriceCents ?: retailPrices.map { it.priceCents }.average().takeUnless(Double::isNaN)?.toLong() ?: 0
 }
 
 /** Sprint 1 stand-in for future authenticated retailer and sold-listing providers. */
@@ -29,4 +33,3 @@ fun sampleSearchResult(query: String) = ProductSearchResult(
     suggestedResalePriceCents = 13_500,
     isSampleData = true,
 )
-

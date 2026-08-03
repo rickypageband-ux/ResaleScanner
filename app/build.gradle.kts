@@ -16,6 +16,8 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "SEARCH_API_URL", "\"https://kqraflpgcrpcioyuroxv.supabase.co/functions/v1/ebay-search\"")
+        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"sb_publishable_EscjhkCTp-1hxOj60X4Zxg_iT3tNBoF\"")
     }
 
     buildTypes {
@@ -30,7 +32,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
     packaging.resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
 }
 

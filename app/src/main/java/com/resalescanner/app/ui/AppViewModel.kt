@@ -8,6 +8,8 @@ import com.resalescanner.app.data.export.InventoryExporter
 import com.resalescanner.app.domain.model.InventoryItem
 import com.resalescanner.app.domain.model.InventoryStatus
 import com.resalescanner.app.domain.repository.InventoryRepository
+import com.resalescanner.app.domain.repository.ProductSearchRepository
+import com.resalescanner.app.domain.model.ProductSearchResult
 import java.io.OutputStream
 import java.time.Instant
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,9 +20,21 @@ import kotlinx.coroutines.launch
 class AppViewModel(
     private val repository: InventoryRepository,
     private val exporter: InventoryExporter,
+    private val productSearchRepository: ProductSearchRepository,
 ) : ViewModel() {
     val inventory: StateFlow<List<InventoryItem>> = repository.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val _searchState = kotlinx.coroutines.flow.MutableStateFlow<ProductSearchState>(ProductSearchState.Idle)
+    val searchState: StateFlow<ProductSearchState> = _searchState
+
+    fun searchProduct(query: String) {
+        viewModelScope.launch {
+            _searchState.value = ProductSearchState.Loading
+            _searchState.value = runCatching { productSearchRepository.search(query) }
+                .fold({ ProductSearchState.Success(it) }, { ProductSearchState.Error(it.message ?: "Search failed") })
+        }
+    }
 
     fun save(draft: ItemDraft, onSaved: () -> Unit = {}) {
         if (draft.title.isBlank()) return
@@ -39,10 +53,18 @@ class AppViewModel(
     class Factory(
         private val repository: InventoryRepository,
         private val exporter: InventoryExporter,
+        private val productSearchRepository: ProductSearchRepository,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = AppViewModel(repository, exporter) as T
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = AppViewModel(repository, exporter, productSearchRepository) as T
     }
+}
+
+sealed interface ProductSearchState {
+    data object Idle : ProductSearchState
+    data object Loading : ProductSearchState
+    data class Success(val result: ProductSearchResult) : ProductSearchState
+    data class Error(val message: String) : ProductSearchState
 }
 
 data class ItemDraft(

@@ -15,9 +15,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val container = (application as ResaleScannerApplication).container
-            val appViewModel: AppViewModel = viewModel(factory = AppViewModel.Factory(container.inventoryRepository, container.inventoryExporter))
+            val appViewModel: AppViewModel = viewModel(factory = AppViewModel.Factory(container.inventoryRepository, container.inventoryExporter, container.productSearchRepository))
             ResaleScannerTheme { ResaleScannerApp(appViewModel) }
         }
     }
 }
-
